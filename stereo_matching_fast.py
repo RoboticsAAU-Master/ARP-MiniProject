@@ -9,7 +9,7 @@ def preprocess_frame(frame):
     frame = cv2.equalizeHist(frame)
 
     # Apply a Gaussian blur to reduce noise while preserving edges
-    frame = cv2.GaussianBlur(frame, (5, 5), 0)
+    frame = cv2.GaussianBlur(frame, (31, 31), 0)
     return frame
 
 
