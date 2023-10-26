@@ -95,72 +95,73 @@ def disparity_to_depth(disparity, baseline, focal_length_pixels):
     return depth
 
 
-# Define stereo parameters
-num_disparities = 64  # number of disparities to check
-window_size = 15  # block size to match
-baseline = 0.42  # baseline between the two cameras in m
-focal_length = 14.67e-3  # focal length of camera in m
-pixel_size = 12e-6  # pixel size of camera in m
-focal_length_pixels = focal_length / pixel_size  # focal length in pixels
+if __name__ == "__main__":
+    # Define stereo parameters
+    num_disparities = 64  # number of disparities to check
+    window_size = 15  # block size to match
+    baseline = 0.42  # baseline between the two cameras in m
+    focal_length = 14.67e-3  # focal length of camera in m
+    pixel_size = 12e-6  # pixel size of camera in m
+    focal_length_pixels = focal_length / pixel_size  # focal length in pixels
 
-# left_image_path = "Images/LeftNavCam.jpg"
-# right_image_path = "Images/RightNavCam.jpg"
-left_image_path = "scene1.row3.col1.ppm"
-right_image_path = "scene1.row3.col3.ppm"
-left_image = cv2.imread(left_image_path, cv2.IMREAD_GRAYSCALE)
-right_image = cv2.imread(right_image_path, cv2.IMREAD_GRAYSCALE)
-left_image = preprocess_frame(left_image)
-right_image = preprocess_frame(right_image)
+    # left_image_path = "Images/LeftNavCam.jpg"
+    # right_image_path = "Images/RightNavCam.jpg"
+    left_image_path = "scene1.row3.col1.ppm"
+    right_image_path = "scene1.row3.col3.ppm"
+    left_image = cv2.imread(left_image_path, cv2.IMREAD_GRAYSCALE)
+    right_image = cv2.imread(right_image_path, cv2.IMREAD_GRAYSCALE)
+    left_image = preprocess_frame(left_image)
+    right_image = preprocess_frame(right_image)
 
-# Disparity without using gradients
-disp = calc_disparity(left_image, right_image, num_disparities, window_size)
-depth = disparity_to_depth(disp, baseline, focal_length_pixels)
+    # Disparity without using gradients
+    disp = calc_disparity(left_image, right_image, num_disparities, window_size)
+    depth = disparity_to_depth(disp, baseline, focal_length_pixels)
 
-# Disparity using gradients
-disp_gd = calc_disparity_grad(left_image, right_image, num_disparities, window_size)
-depth_gd = disparity_to_depth(disp_gd, baseline, focal_length_pixels)
+    # Disparity using gradients
+    disp_gd = calc_disparity_grad(left_image, right_image, num_disparities, window_size)
+    depth_gd = disparity_to_depth(disp_gd, baseline, focal_length_pixels)
 
-# Disparity using OpenCV
-stereo = cv2.StereoBM_create(num_disparities, window_size)
-disp_cv = stereo.compute(left_image, right_image)
-depth_cv = disparity_to_depth(disp_cv, baseline, focal_length_pixels)
+    # Disparity using OpenCV
+    stereo = cv2.StereoBM_create(num_disparities, window_size)
+    disp_cv = stereo.compute(left_image, right_image)
+    depth_cv = disparity_to_depth(disp_cv, baseline, focal_length_pixels)
 
-# Plot the results for comparison
-fig, ax = plt.subplots(2, 3, figsize=(15, 8))
-fig.tight_layout()
-ax[0, 0].set_title("Disparity without gradients")
-ax[0, 1].set_title("Disparity with gradients")
-ax[0, 2].set_title("Disparity using OpenCV")
+    # Plot the results for comparison
+    fig, ax = plt.subplots(2, 3, figsize=(15, 8))
+    fig.tight_layout(pad=1.0)
+    ax[0, 0].set_title("Disparity without gradients")
+    ax[0, 1].set_title("Disparity with gradients")
+    ax[0, 2].set_title("Disparity using OpenCV")
 
-# Plot limits
-vmin_disp = 0
-vmax_disp = np.max([np.max(disp), np.max(disp_gd), np.max(disp_cv)])
-vmin_dist = 0
-vmax_dist = np.max([np.max(depth), np.max(depth_gd), np.max(depth_cv)])
+    # Plot limits
+    vmin_disp = 0
+    vmax_disp = np.max([np.max(disp), np.max(disp_gd), np.max(disp_cv)])
+    vmin_dist = 0
+    vmax_dist = np.max([np.max(depth), np.max(depth_gd), np.max(depth_cv)])
 
-# Create plots
-ax[0, 0].imshow(disp, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
-ax[1, 0].imshow(depth, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
-ax[0, 1].imshow(disp_gd, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
-ax[1, 1].imshow(depth_gd, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
-ax[0, 2].imshow(disp_cv, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
-ax[1, 2].imshow(depth_cv, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
+    # Create plots
+    ax[0, 0].imshow(disp, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
+    ax[1, 0].imshow(depth, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
+    ax[0, 1].imshow(disp_gd, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
+    ax[1, 1].imshow(depth_gd, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
+    ax[0, 2].imshow(disp_cv, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
+    ax[1, 2].imshow(depth_cv, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
 
-# Create colorbars for each subplot
-cbar_disp = fig.colorbar(ax[0, 0].images[0], ax=ax[0, 0], shrink=0.8)
-cbar_dist = fig.colorbar(ax[1, 0].images[0], ax=ax[1, 0], shrink=0.8)
-cbar_disp_gd = fig.colorbar(ax[0, 1].images[0], ax=ax[0, 1], shrink=0.8)
-cbar_dist_gd = fig.colorbar(ax[1, 1].images[0], ax=ax[1, 1], shrink=0.8)
-cbar_disp_cv = fig.colorbar(ax[0, 2].images[0], ax=ax[0, 2], shrink=0.8)
-cbar_dist_cv = fig.colorbar(ax[1, 2].images[0], ax=ax[1, 2], shrink=0.8)
+    # Create colorbars for each subplot
+    cbar_disp = fig.colorbar(ax[0, 0].images[0], ax=ax[0, 0], shrink=0.8)
+    cbar_dist = fig.colorbar(ax[1, 0].images[0], ax=ax[1, 0], shrink=0.8)
+    cbar_disp_gd = fig.colorbar(ax[0, 1].images[0], ax=ax[0, 1], shrink=0.8)
+    cbar_dist_gd = fig.colorbar(ax[1, 1].images[0], ax=ax[1, 1], shrink=0.8)
+    cbar_disp_cv = fig.colorbar(ax[0, 2].images[0], ax=ax[0, 2], shrink=0.8)
+    cbar_dist_cv = fig.colorbar(ax[1, 2].images[0], ax=ax[1, 2], shrink=0.8)
 
-# Set colorbar labels
-cbar_disp.set_label("Disparity [px]")
-cbar_dist.set_label("Depth [m]")
-cbar_disp_gd.set_label("Disparity [px]")
-cbar_dist_gd.set_label("Depth [m]")
-cbar_disp_cv.set_label("Disparity [px]")
-cbar_dist_cv.set_label("Depth [m]")
+    # Set colorbar labels
+    cbar_disp.set_label("Disparity [px]")
+    cbar_dist.set_label("Depth [m]")
+    cbar_disp_gd.set_label("Disparity [px]")
+    cbar_dist_gd.set_label("Depth [m]")
+    cbar_disp_cv.set_label("Disparity [px]")
+    cbar_dist_cv.set_label("Depth [m]")
 
-# Show the plot
-plt.waitforbuttonpress()
+    # Show the plot
+    plt.waitforbuttonpress()
