@@ -9,7 +9,7 @@ def preprocess_frame(frame):
     frame = cv2.equalizeHist(frame)
 
     # Apply a Gaussian blur to reduce noise while preserving edges
-    frame = cv2.GaussianBlur(frame, (31, 31), 0)
+    frame = cv2.GaussianBlur(frame, (5, 5), 0)
     return frame
 
 
@@ -56,7 +56,7 @@ def calc_disparity_grad(left_image, right_image, num_disparities=64, window_size
 
     # Select disparity with minimum SAD
     disparity = np.argmin(disparity_maps, axis=2)
-    disparity = np.uint16(disparity * 1023 / num_disparities)
+    #disparity = np.uint16(disparity)
 
     return disparity
 
@@ -84,21 +84,25 @@ def calc_disparity(left_image, right_image, num_disparities=64, window_size=15):
 
     # Select disparity with minimum SAD
     disparity = np.argmin(disparity_maps, axis=2)
-    disparity = np.uint16(disparity * 1023 / num_disparities)
+    #disparity = np.uint16(disparity)
 
     return disparity
 
 
 def disparity_to_depth(disparity, baseline, focal_length_pixels):
     depth = np.zeros_like(disparity, dtype=np.float32)
-    depth[disparity > 64] = (baseline * focal_length_pixels) / disparity[disparity > 64]
+    depth[disparity > 10] = (baseline * focal_length_pixels) / disparity[disparity > 10]
     return depth
 
 
+# TODO:
+# Crop disp image to remove gradient region on left side
+# Eliminate depth calculation for disp values outside the range 10 - 100 (adjust range as needed)
+
 if __name__ == "__main__":
     # Define stereo parameters
-    num_disparities = 64  # number of disparities to check
-    window_size = 15  # block size to match
+    num_disparities = 16*8  # number of disparities to check (Dont change its fine)
+    window_size =51  # block size to match (Maybe make small adjustments)
     baseline = 0.42  # baseline between the two cameras in m
     focal_length = 14.67e-3  # focal length of camera in m
     pixel_size = 12e-6  # pixel size of camera in m
@@ -106,10 +110,14 @@ if __name__ == "__main__":
 
     # left_image_path = "Images/LeftNavCam.jpg"
     # right_image_path = "Images/RightNavCam.jpg"
-    left_image_path = "scene1.row3.col1.ppm"
-    right_image_path = "scene1.row3.col3.ppm"
+    left_image_path = "LFT_03_000750.tif"
+    right_image_path = "RGT_03_000750.tif"
     left_image = cv2.imread(left_image_path, cv2.IMREAD_GRAYSCALE)
     right_image = cv2.imread(right_image_path, cv2.IMREAD_GRAYSCALE)
+    
+    left_image = cv2.resize(left_image, (0,0), fx=0.25, fy=0.25)
+    right_image = cv2.resize(right_image, (0,0), fx=0.25, fy=0.25)
+    
     left_image = preprocess_frame(left_image)
     right_image = preprocess_frame(right_image)
 
@@ -124,7 +132,6 @@ if __name__ == "__main__":
     # Disparity using OpenCV
     stereo = cv2.StereoBM_create(num_disparities, window_size)
     disp_cv = stereo.compute(left_image, right_image)
-    depth_cv = disparity_to_depth(disp_cv, baseline, focal_length_pixels)
 
     # Plot the results for comparison
     fig, ax = plt.subplots(2, 3, figsize=(15, 8))
@@ -135,17 +142,21 @@ if __name__ == "__main__":
 
     # Plot limits
     vmin_disp = 0
-    vmax_disp = np.max([np.max(disp), np.max(disp_gd), np.max(disp_cv)])
+    vmax_disp = np.max([np.max(disp), np.max(disp_gd)])
     vmin_dist = 0
-    vmax_dist = np.max([np.max(depth), np.max(depth_gd), np.max(depth_cv)])
+    vmax_dist = np.max([np.max(depth), np.max(depth_gd)])
+    
+    # Normalize cv output
+    disp_cv = np.multiply(disp_cv, vmax_disp / disp_cv.max())
+    depth_cv = disparity_to_depth(disp_cv, baseline, focal_length_pixels)
 
     # Create plots
     ax[0, 0].imshow(disp, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
     ax[1, 0].imshow(depth, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
     ax[0, 1].imshow(disp_gd, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
     ax[1, 1].imshow(depth_gd, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
-    ax[0, 2].imshow(disp_cv, cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
-    ax[1, 2].imshow(depth_cv, cmap="viridis", vmin=vmin_dist, vmax=vmax_dist)
+    ax[0, 2].imshow(disp_cv, cmap="gray")#, vmin=vmin_disp, vmax=vmax_disp)
+    ax[1, 2].imshow(depth_cv, cmap="viridis")#, vmin=vmin_dist, vmax=vmax_dist)
 
     # Create colorbars for each subplot
     cbar_disp = fig.colorbar(ax[0, 0].images[0], ax=ax[0, 0], shrink=0.8)
@@ -164,4 +175,4 @@ if __name__ == "__main__":
     cbar_dist_cv.set_label("Depth [m]")
 
     # Show the plot
-    plt.waitforbuttonpress()
+    plt.show()

@@ -1,8 +1,12 @@
 import stereo_matching_fast as sm
+import Rectifying as rect
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
+
+num_disparities = 16*2
+window_size = 71
 
 cap_left = cv2.VideoCapture('3D_L4948.MP4')
 cap_right = cv2.VideoCapture('3D_R0219.MP4')
@@ -14,7 +18,7 @@ min_length = np.min([video_length_left, video_length_right])
 
 fig, ax = plt.subplots(1, 2)
 plt.ion()
-stereo = cv2.StereoBM_create(16*2, 5)
+stereo = cv2.StereoBM_create(num_disparities, window_size)
 
 def pool_expand(arr, kernel_size):
     m, n = arr.shape
@@ -33,13 +37,16 @@ def skip_to_time(capture_object, timestamp_seconds):
     # Set the capture's position to the calculated frame number
     capture_object.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
     
-skip_to_time(cap_left, 120)
-skip_to_time(cap_right, 120)
+skip_to_time(cap_left, 160)
+skip_to_time(cap_right, 160)
 
 for f in tqdm(range(int(min_length-1))):
     
     ret_l, frame_l = cap_left.read()
     ret_r, frame_r = cap_right.read()
+    
+    frame_l, frame_r = rect.rectify(frame_l, frame_r)
+    
     if ret_l is None or ret_r is None:
         break
     
@@ -52,8 +59,9 @@ for f in tqdm(range(int(min_length-1))):
     frame_gray_l = sm.preprocess_frame(frame_gray_l)
     frame_gray_r = sm.preprocess_frame(frame_gray_r)
     
-    disparity_map = sm.calc_disparity_grad(frame_gray_l, frame_gray_r, num_disparities=16*4, window_size=5)
-    disparity_map = pool_expand(disparity_map, 1)
+    disparity_map = sm.calc_disparity(frame_gray_l, frame_gray_r, num_disparities, window_size)
+    disparity_map = pool_expand(disparity_map, 1)[:, num_disparities+window_size:disparity_map.shape[1]]
+    
     ax[0].imshow(disparity_map, cmap="gray")
     
     
