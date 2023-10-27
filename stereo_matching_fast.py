@@ -39,7 +39,7 @@ def calc_disparity_grad(left_image, right_image, num_disparities=64, window_size
     grad_y_right = np.gradient(right_image, axis=0)
 
     for disparity in tqdm(
-        range(num_disparities), desc="Computing disparity (gradients)"
+        range(num_disparities), desc="Computing disparity (gradients)", leave=False
     ):
         # Shift right image
         grad_x_right_shifted = shift_image(grad_x_right, disparity)
@@ -70,7 +70,7 @@ def calc_disparity(left_image, right_image, num_disparities=64, window_size=15):
     )
 
     for disparity in tqdm(
-        range(num_disparities), desc="Computing disparity            "
+        range(num_disparities), desc="Computing disparity            ", leave=False
     ):
         # Shift right image
         right_image_shifted = shift_image(right_image, disparity)
