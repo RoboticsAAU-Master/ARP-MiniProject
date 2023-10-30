@@ -88,7 +88,7 @@ def calc_disparity(left_image, right_image, num_disparities=64, window_size=15):
 
 
 def disparity_to_depth(
-    disparity, baseline, focal_length_pixels, lower_bound=10, upper_bound=130
+    disparity, baseline, focal_length_pixels, lower_bound=3, upper_bound=130
 ):
     depth = np.full_like(
         disparity, -1, dtype=np.float32
@@ -100,8 +100,8 @@ def disparity_to_depth(
 
 if __name__ == "__main__":
     # Define stereo parameters
-    num_disparities = 16 * 7  # number of disparities to check (Dont change its fine)
-    window_size = 51  # block size to match (Maybe make small adjustments)
+    num_disparities = 16 * 2  # number of disparities to check (Dont change its fine)
+    window_size = 61  # block size to match (Maybe make small adjustments)
     baseline = 0.42  # baseline between the two cameras in m
     focal_length = 14.67e-3  # focal length of camera in m
     pixel_size = 12e-6 * 4  # pixel size of camera in m
@@ -150,19 +150,37 @@ if __name__ == "__main__":
     fig5, ax5 = plt.subplots(1, 1)
     fig6, ax6 = plt.subplots(1, 1)
     fig7, ax7 = plt.subplots(1, 1)
+    fig8, ax8 = plt.subplots(1, 1)
 
     # Plot the data on each individual subplot
-    ax1.imshow(disp[:, num_disparities:], cmap="gray", vmin=vmin_disp, vmax=vmax_disp)
-    ax2.imshow(depth[:, num_disparities:], cmap="gray", vmin=vmin_dist, vmax=vmax_dist)
+    ax1.imshow(
+        disp[:, : disp.shape[1] - window_size],
+        cmap="gray",
+        vmin=vmin_disp,
+        vmax=vmax_disp,
+    )
+    ax2.imshow(
+        depth[:, : depth.shape[1] - window_size],
+        cmap="gray",
+        vmin=vmin_dist,
+        vmax=vmax_dist,
+    )
     ax3.imshow(
-        disp_gd[:, num_disparities:], cmap="gray", vmin=vmin_disp, vmax=vmax_disp
+        disp_gd[:, : disp_gd.shape[1] - window_size],
+        cmap="gray",
+        vmin=vmin_disp,
+        vmax=vmax_disp,
     )
     ax4.imshow(
-        depth_gd[:, num_disparities:], cmap="gray", vmin=vmin_dist, vmax=vmax_dist
+        depth_gd[:, : depth_gd.shape[1] - window_size],
+        cmap="gray",
+        vmin=vmin_dist,
+        vmax=vmax_dist,
     )
     ax5.imshow(disp_cv[:, num_disparities:], cmap="gray")
     ax6.imshow(depth_cv[:, num_disparities:], cmap="gray")
-    ax7.imshow(left_image, cmap="gray")
+    ax7.imshow(left_image[:, num_disparities:], cmap="gray")
+    ax8.imshow(right_image[:, num_disparities:], cmap="gray")
 
     # Create colorbars for each subplot
     cbar_disp1 = fig1.colorbar(ax1.images[0], shrink=0.8)
@@ -180,6 +198,7 @@ if __name__ == "__main__":
     ax5.set_title("Disparity using OpenCV")
     ax6.set_title("Distance using OpenCV")
     ax7.set_title("Pre-processed left image")
+    ax8.set_title("Pre-processed right image")
 
     # Set colorbar labels
     cbar_disp1.set_label("Disparity [px]")
@@ -196,7 +215,8 @@ if __name__ == "__main__":
     fig4.savefig("distance_grad.png")
     fig5.savefig("disparity_cv.png")
     fig6.savefig("distance_cv.png")
-    fig7.savefig("preprocessed_image.png")
+    fig7.savefig("preprocessed_imageL.png")
+    fig8.savefig("preprocessed_imageR.png")
 
     # Show the plot
     plt.show()
