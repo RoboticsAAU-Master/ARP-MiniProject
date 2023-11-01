@@ -2,6 +2,21 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
+from time import time
+from scipy import io
+from pymatreader import read_mat
+from Rectifying import rectify
+
+
+def to_image_range(image):
+    # Set negative values to 0
+    image[image < 0] = 0
+
+    # Return image scaled to 0-255
+    out_image = (
+        255 * (image - np.min(image)) / (np.max(image) - np.min(image))
+    ).astype(np.uint8)
+    return out_image
 
 
 def preprocess_frame(frame):
@@ -100,12 +115,14 @@ def disparity_to_depth(
 
 if __name__ == "__main__":
     # Define stereo parameters
-    num_disparities = 16 * 2  # number of disparities to check (Dont change its fine)
-    window_size = 61  # block size to match (Maybe make small adjustments)
-    baseline = 0.42  # baseline between the two cameras in m
-    focal_length = 14.67e-3  # focal length of camera in m
-    pixel_size = 12e-6 * 4  # pixel size of camera in m
-    focal_length_pixels = focal_length / pixel_size  # focal length in pixels
+    num_disparities = 32 * 2  # number of disparities to check (Dont change its fine)
+    window_size = 51  # block size to match (Maybe make small adjustments)
+    # baseline = 0.42  # baseline between the two cameras in m
+    # focal_length = 14.67e-3  # focal length of camera in m
+    # pixel_size = 12e-6 * 4  # pixel size of camera in m
+    # focal_length_pixels = focal_length / pixel_size  # focal length in pixels
+    baseline = 0.385
+    focal_length_pixels = 1850.0
 
     # left_image_path = "Images/LeftNavCam.jpg"
     # right_image_path = "Images/RightNavCam.jpg"
@@ -114,8 +131,14 @@ if __name__ == "__main__":
     left_image_raw = cv2.imread(left_image_path, cv2.IMREAD_GRAYSCALE)
     right_image_raw = cv2.imread(right_image_path, cv2.IMREAD_GRAYSCALE)
 
+    # left_image_rectified, right_image_rectified = rectify(
+    #     left_image_raw, right_image_raw
+    # )
+
     left_image_rz = cv2.resize(left_image_raw, (0, 0), fx=0.25, fy=0.25)
     right_image_rz = cv2.resize(right_image_raw, (0, 0), fx=0.25, fy=0.25)
+    # left_image_rz = cv2.resize(left_image_rectified, (0, 0), fx=0.25, fy=0.25)
+    # right_image_rz = cv2.resize(right_image_rectified, (0, 0), fx=0.25, fy=0.25)
 
     left_image = preprocess_frame(left_image_rz)
     right_image = preprocess_frame(right_image_rz)
@@ -125,12 +148,16 @@ if __name__ == "__main__":
     depth = disparity_to_depth(disp, baseline, focal_length_pixels)
 
     # Disparity using gradients
+    start = time()
     disp_gd = calc_disparity_grad(left_image, right_image, num_disparities, window_size)
+    duration = time() - start
     depth_gd = disparity_to_depth(disp_gd, baseline, focal_length_pixels)
 
     # Disparity using OpenCV
+    start = time()
     stereo = cv2.StereoBM_create(num_disparities, 11)
     disp_cv = stereo.compute(left_image, right_image)
+    duration = time() - start
 
     # Plot limits
     vmin_disp = 0
@@ -209,14 +236,24 @@ if __name__ == "__main__":
     cbar_dist_cv6.set_label("Depth [m]")
 
     # Save the figures
-    fig1.savefig("disparity_no_grad.png")
-    fig2.savefig("distance_no_grad.png")
-    fig3.savefig("disparity_grad.png")
-    fig4.savefig("distance_grad.png")
-    fig5.savefig("disparity_cv.png")
-    fig6.savefig("distance_cv.png")
-    fig7.savefig("preprocessed_imageL.png")
-    fig8.savefig("preprocessed_imageR.png")
+    # fig1.savefig("disparity_no_grad.png")
+    # fig2.savefig("distance_no_grad.png")
+    # fig3.savefig("disparity_grad.png")
+    # fig4.savefig("distance_grad.png")
+    # fig5.savefig("disparity_cv.png")
+    # fig6.savefig("distance_cv.png")
+    # fig7.savefig("preprocessed_imageL.png")
+    # fig8.savefig("preprocessed_imageR.png")
+
+    # Saving the images with opencv
+    # disp_gd_cv = to_image_range(disp_gd)
+    # depth_gd_cv = to_image_range(depth_gd)
+    # disp_gd_cv = shift_image(disp_gd_cv, num_disparities)
+    # depth_gd_cv = shift_image(depth_gd_cv, num_disparities)
+
+    # cv2.imwrite("preprocessed_imageL_cv.png", left_image)
+    # cv2.imwrite("disparity_grad_cv.png", disp_gd_cv)
+    # cv2.imwrite("distance_grad_cv_res.png", depth_gd_cv)
 
     # Show the plot
     plt.show()
